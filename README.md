@@ -45,7 +45,7 @@ Approximate Atlantic basin view: 5°N–50°N, 100°W–20°W.
 HURDAT2 Atlantic hurricane database, National Hurricane Center / NOAA.
 https://www.nhc.noaa.gov/data/hurdat/
 
-Basemap: OpenStreetMap contributors & CARTO (dark tiles via Leaflet CDN).
+Basemap: Esri World Dark Gray Canvas (via Leaflet CDN).
 
 ## Layout
 

@@ -176,12 +176,14 @@
       maxZoom: 8,
     });
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      subdomains: "abcd",
-      maxZoom: 19,
-    }).addTo(map);
+    L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      {
+        attribution:
+          "Tiles &copy; Esri — Esri, DeLorme, NAVTEQ",
+        maxZoom: 16,
+      }
+    ).addTo(map);
 
     // Atlantic basin ~ 5N–50N, 100W–20W
     const bounds = L.latLngBounds([5, -100], [50, -20]);
