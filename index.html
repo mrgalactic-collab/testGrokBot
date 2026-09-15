@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Atlantic HURDAT2 — Day-of-Year Animation</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="map" role="application" aria-label="Atlantic tropical cyclone map"></div>
+
+  <div id="loading" class="loading">Loading HURDAT2 frames…</div>
+
+  <header class="panel header">
+    <h1>Atlantic HURDAT2 Composite</h1>
+    <p>All years stacked on the same calendar day &amp; 6-hour synoptic time (UTC). Data: NHC HURDAT2.</p>
+    <p id="years" class="meta-line" style="margin-top:6px"></p>
+  </header>
+
+  <aside id="legend" class="panel legend" aria-label="Status legend"></aside>
+
+  <div class="panel controls" role="group" aria-label="Animation controls">
+    <div class="row">
+      <div id="datetime" class="datetime">—</div>
+      <div id="count" class="meta-line">—</div>
+    </div>
+    <div class="row">
+      <button id="btn-play" class="primary" type="button">Play</button>
+      <label class="meta-line" for="speed">Speed</label>
+      <select id="speed" aria-label="Animation speed">
+        <option value="1000">Slow (1s)</option>
+        <option value="500" selected>Normal (0.5s)</option>
+        <option value="250">Fast (0.25s)</option>
+        <option value="100">Very fast (0.1s)</option>
+      </select>
+      <input id="scrubber" type="range" min="0" max="1" value="0" aria-label="Timeline scrubber" />
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
