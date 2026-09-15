@@ -170,3 +170,11 @@ input[type="range"] {
   .header h1 { font-size: 1rem; }
   .datetime { min-width: 0; font-size: 0.95rem; }
 }
+
+select#speed, select#trails {
+  max-width: 160px;
+}
+
+.legend .swatch {
+  flex-shrink: 0;
+}

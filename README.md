@@ -27,14 +27,15 @@ python3 scripts/preprocess.py
 ```
 
 Reads `/workspace/hurdat2/hurdat2-atlantic.txt` (or `data/hurdat2-atlantic.txt`
-if already copied) and writes `data/frames.json`.
+if already copied) and writes `data/frames.json` (frames + per-storm tracks).
 
 ## Controls
 
 - **Play / Pause** — step through the year every 6 hours
 - **Speed** — frame interval (default 500 ms)
+- **Trails** — Off, 1–6 days / 1 week sliding window, or Full path (genesis → current fix) per storm
 - **Scrubber** — jump to any day/time
-- Markers are colored by storm status; hover for name, year, and wind
+- Markers sized/colored by status; hurricanes use Saffir–Simpson Cat 1–5 by max wind (kt). Hover for name, year, category, and wind.
 
 ## Map
 
@@ -56,7 +57,7 @@ hurdat2-animation/
 ├── css/style.css
 ├── js/app.js
 ├── data/
-│   ├── frames.json          # animation frames (generated)
+│   ├── frames.json          # animation frames + tracks (generated)
 │   └── hurdat2-atlantic.txt # local copy of raw HURDAT2 (copied by preprocess)
 └── scripts/
     └── preprocess.py

@@ -4,7 +4,7 @@ Preprocess NHC HURDAT2 Atlantic best-track data into animation frames.
 
 Groups synoptic fixes (0000/0600/1200/1800 UTC) by calendar day+time
 (MMDD-HHMM), ignoring year, so all historical storms share one composite
-timeline.
+timeline. Also emits per-storm chronological tracks for trail rendering.
 """
 
 from __future__ import annotations
@@ -67,8 +67,17 @@ def find_raw() -> Path:
     )
 
 
+def storm_year_from_id(storm_id: str, fallback: int | None = None) -> int | None:
+    # ATCF id e.g. AL092021 → season year 2021
+    if len(storm_id) >= 8 and storm_id[4:8].isdigit():
+        return int(storm_id[4:8])
+    return fallback
+
+
 def preprocess(raw_path: Path) -> dict:
     frames: dict[str, list] = defaultdict(list)
+    tracks: dict[str, dict] = {}
+    storm_id = ""
     storm_name = "UNNAMED"
     n_points = 0
     n_storms = 0
@@ -81,11 +90,12 @@ def preprocess(raw_path: Path) -> dict:
                 continue
             parts = [p.strip() for p in line.split(",")]
             if is_header(parts):
+                storm_id = parts[0].strip()
                 storm_name = parts[1].strip() or "UNNAMED"
                 n_storms += 1
                 continue
 
-            if len(parts) < 7:
+            if len(parts) < 7 or not storm_id:
                 continue
 
             date_s = parts[0]
@@ -109,10 +119,22 @@ def preprocess(raw_path: Path) -> dict:
             year = int(date_s[0:4])
             mmdd = date_s[4:8]
             key = f"{mmdd}-{time_s}"
+            lat_r = round(lat, 2)
+            lon_r = round(lon, 2)
 
             frames[key].append(
-                [round(lat, 2), round(lon, 2), storm_name, year, status, wind]
+                [lat_r, lon_r, storm_name, year, status, wind, storm_id]
             )
+
+            if storm_id not in tracks:
+                tracks[storm_id] = {
+                    "name": storm_name,
+                    "year": storm_year_from_id(storm_id, year),
+                    "pts": [],
+                }
+            # Append in file order = chronological by real date/time
+            tracks[storm_id]["pts"].append([lat_r, lon_r, status, wind, key])
+
             n_points += 1
             years.add(year)
             status_counts[status] += 1
@@ -122,7 +144,7 @@ def preprocess(raw_path: Path) -> dict:
     for k in keys:
         pts = frames.get(k)
         if pts:
-            pts.sort(key=lambda p: (p[3], p[2]))
+            pts.sort(key=lambda p: (p[3], p[2], p[6]))
             packed[k] = pts
 
     meta = {
@@ -136,10 +158,19 @@ def preprocess(raw_path: Path) -> dict:
         "year_min": min(years) if years else None,
         "year_max": max(years) if years else None,
         "status_counts": dict(status_counts),
-        "point_schema": ["lat", "lon", "name", "year", "status", "wind_kt"],
+        "point_schema": [
+            "lat",
+            "lon",
+            "name",
+            "year",
+            "status",
+            "wind_kt",
+            "storm_id",
+        ],
+        "track_pt_schema": ["lat", "lon", "status", "wind_kt", "MMDD-HHMM"],
         "frame_key": "MMDD-HHMM (UTC, year ignored)",
     }
-    return {"meta": meta, "keys": keys, "frames": packed}
+    return {"meta": meta, "keys": keys, "frames": packed, "tracks": tracks}
 
 
 def main() -> None:
@@ -163,6 +194,7 @@ def main() -> None:
     print(
         f"Done: {m['storms']} storms, {m['points']} points, "
         f"{m['frames_with_data']}/{m['frame_slots']} non-empty frames, "
+        f"{len(data['tracks'])} tracks, "
         f"{size_mb:.2f} MB → {OUT_PATH}"
     )
 

@@ -5,7 +5,7 @@
   const STATUS_COLORS = {
     TD: "#60a5fa", // tropical depression
     TS: "#34d399", // tropical storm
-    HU: "#f87171", // hurricane
+    HU: "#f87171", // hurricane (fallback)
     EX: "#a78bfa", // extratropical
     LO: "#94a3b8", // low
     DB: "#fbbf24", // disturbance
@@ -14,6 +14,25 @@
     WV: "#fb923c", // tropical wave
     OTHER: "#e2e8f0",
   };
+
+  // Saffir–Simpson by max wind (kt) — subtle red ramp
+  const HU_CAT_COLORS = {
+    1: "#fda4af", // light red / rose
+    2: "#fb7185",
+    3: "#f43f5e",
+    4: "#e11d48",
+    5: "#9f1239", // darkest
+  };
+
+  const HU_CAT_RADIUS = {
+    1: 5.5,
+    2: 6.5,
+    3: 7.5,
+    4: 8.5,
+    5: 10,
+  };
+
+  const NON_HU_RADIUS = 4.5;
 
   const STATUS_LABELS = {
     TD: "Tropical Depression",
@@ -33,13 +52,28 @@
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   ];
 
+  // trail select value → number of synoptic fixes in sliding window (null = full)
+  const TRAIL_FIXES = {
+    off: 0,
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "5": 20,
+    "6": 24,
+    "7": 28,
+    full: null,
+  };
+
   const state = {
     data: null,
     index: 0,
     playing: false,
     timer: null,
     intervalMs: 500,
+    trailMode: "off",
     layer: null,
+    trailLayer: null,
   };
 
   const els = {
@@ -47,6 +81,7 @@
     play: null,
     scrubber: null,
     speed: null,
+    trails: null,
     datetime: null,
     count: null,
     loading: null,
@@ -63,28 +98,143 @@
     return `${MONTHS[mm - 1]} ${dd} · ${hh}:${mi} UTC`;
   }
 
-  function colorFor(status) {
+  function huCategory(wind) {
+    if (wind == null || wind < 64) return null;
+    if (wind <= 82) return 1;
+    if (wind <= 95) return 2;
+    if (wind <= 112) return 3;
+    if (wind <= 136) return 4;
+    return 5;
+  }
+
+  function colorFor(status, wind) {
+    if (status === "HU") {
+      const cat = huCategory(wind);
+      if (cat) return HU_CAT_COLORS[cat];
+      return STATUS_COLORS.HU;
+    }
     return STATUS_COLORS[status] || STATUS_COLORS.OTHER;
   }
 
+  function radiusFor(status, wind) {
+    if (status === "HU") {
+      const cat = huCategory(wind);
+      if (cat) return HU_CAT_RADIUS[cat];
+    }
+    return NON_HU_RADIUS;
+  }
+
+  function statusLabel(status, wind) {
+    if (status === "HU") {
+      const cat = huCategory(wind);
+      if (cat) return `Hurricane Cat ${cat}`;
+      return STATUS_LABELS.HU;
+    }
+    return STATUS_LABELS[status] || status;
+  }
+
   function buildLegend() {
-    const order = ["HU", "TS", "TD", "SS", "SD", "EX", "LO", "DB", "WV", "OTHER"];
-    els.legend.innerHTML =
-      "<h2>Status</h2>" +
-      order
-        .map(
-          (s) =>
-            `<div class="legend-item"><span class="swatch" style="background:${colorFor(
-              s
-            )}"></span>${STATUS_LABELS[s]}</div>`
-        )
-        .join("");
+    const items = [];
+    for (let c = 1; c <= 5; c++) {
+      items.push(
+        `<div class="legend-item"><span class="swatch" style="background:${HU_CAT_COLORS[c]};width:${6 + c}px;height:${6 + c}px"></span>Hurricane Cat ${c}</div>`
+      );
+    }
+    const rest = ["TS", "TD", "SS", "SD", "EX", "LO", "DB", "WV", "OTHER"];
+    for (const s of rest) {
+      items.push(
+        `<div class="legend-item"><span class="swatch" style="background:${STATUS_COLORS[s]}"></span>${STATUS_LABELS[s]}</div>`
+      );
+    }
+    els.legend.innerHTML = "<h2>Status</h2>" + items.join("");
+  }
+
+  function findTrackIndex(trackPts, frameKey, lat, lon) {
+    // Prefer last matching key (storm may revisit same MMDD across NYE rarely);
+    // match lat/lon when key appears more than once.
+    let fallback = -1;
+    for (let i = 0; i < trackPts.length; i++) {
+      const tp = trackPts[i];
+      if (tp[4] !== frameKey) continue;
+      fallback = i;
+      if (tp[0] === lat && tp[1] === lon) return i;
+    }
+    return fallback;
+  }
+
+  function trailSlice(trackPts, endIdx, mode) {
+    if (endIdx < 0 || !trackPts.length) return [];
+    const n = TRAIL_FIXES[mode];
+    if (n === 0) return [];
+    if (n == null) {
+      // full path through current fix
+      return trackPts.slice(0, endIdx + 1);
+    }
+    const start = Math.max(0, endIdx - n + 1);
+    return trackPts.slice(start, endIdx + 1);
+  }
+
+  function drawTrails(points, frameKey) {
+    if (state.trailLayer) {
+      state.map.removeLayer(state.trailLayer);
+      state.trailLayer = null;
+    }
+    const mode = state.trailMode;
+    if (mode === "off" || !state.data.tracks) {
+      state.trailLayer = L.layerGroup().addTo(state.map);
+      return;
+    }
+
+    const segments = [];
+    const seen = new Set();
+
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      const sid = p[6];
+      if (!sid || seen.has(sid)) continue;
+      seen.add(sid);
+
+      const track = state.data.tracks[sid];
+      if (!track || !track.pts || track.pts.length < 2) continue;
+
+      const endIdx = findTrackIndex(track.pts, frameKey, p[0], p[1]);
+      const slice = trailSlice(track.pts, endIdx, mode);
+      if (slice.length < 2) continue;
+
+      for (let j = 1; j < slice.length; j++) {
+        const a = slice[j - 1];
+        const b = slice[j];
+        // Color segment by the later vertex status/wind
+        const col = colorFor(b[2], b[3]);
+        segments.push(
+          L.polyline(
+            [
+              [a[0], a[1]],
+              [b[0], b[1]],
+            ],
+            {
+              color: col,
+              weight: 1.5,
+              opacity: 0.35,
+              lineCap: "round",
+              lineJoin: "round",
+              interactive: false,
+              renderer: state.renderer,
+            }
+          )
+        );
+      }
+    }
+
+    state.trailLayer = L.layerGroup(segments).addTo(state.map);
   }
 
   function renderFrame(idx) {
     const keys = state.data.keys;
     const key = keys[idx];
     const points = state.data.frames[key] || [];
+
+    drawTrails(points, key);
 
     if (state.layer) {
       state.map.removeLayer(state.layer);
@@ -100,16 +250,16 @@
       const wind = p[5];
       const windTxt = wind == null ? "—" : `${wind} kt`;
       const marker = L.circleMarker([lat, lon], {
-        radius: 5,
+        radius: radiusFor(status, wind),
         color: "#0f172a",
         weight: 0.6,
         opacity: 0.5,
-        fillColor: colorFor(status),
+        fillColor: colorFor(status, wind),
         fillOpacity: 0.55,
         renderer: state.renderer,
       });
       marker.bindTooltip(
-        `<strong>${name}</strong> (${year})<br>${STATUS_LABELS[status] || status}<br>Max wind: ${windTxt}`,
+        `<strong>${name}</strong> (${year})<br>${statusLabel(status, wind)}<br>Max wind: ${windTxt}`,
         { className: "storm-tooltip", direction: "top", sticky: true }
       );
       markers.push(marker);
@@ -162,6 +312,7 @@
     els.play = document.getElementById("btn-play");
     els.scrubber = document.getElementById("scrubber");
     els.speed = document.getElementById("speed");
+    els.trails = document.getElementById("trails");
     els.datetime = document.getElementById("datetime");
     els.count = document.getElementById("count");
     els.loading = document.getElementById("loading");
@@ -192,6 +343,7 @@
 
     state.map = map;
     state.renderer = L.canvas({ padding: 0.5 });
+    state.trailLayer = L.layerGroup().addTo(map);
     state.layer = L.layerGroup().addTo(map);
 
     const resp = await fetch("data/frames.json");
@@ -207,6 +359,8 @@
     els.scrubber.max = String(state.data.keys.length - 1);
     els.scrubber.value = "0";
 
+    state.trailMode = els.trails.value;
+
     els.play.addEventListener("click", togglePlay);
     els.scrubber.addEventListener("input", () => {
       stop();
@@ -218,6 +372,10 @@
         stop();
         play();
       }
+    });
+    els.trails.addEventListener("change", () => {
+      state.trailMode = els.trails.value;
+      renderFrame(state.index);
     });
 
     jumpToPeakSeason();
