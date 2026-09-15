@@ -33,7 +33,7 @@ if already copied) and writes `data/frames.json` (frames + per-storm tracks).
 
 - **Play / Pause** — step through the year every 6 hours
 - **Speed** — frame interval (default 500 ms)
-- **Trails** — Off, 1–6 days / 1 week sliding window, or Full path (genesis → current fix) per storm
+- **Trails** — Off, 1–6 days, 1 week, or Full path. Sliding lengths keep each segment until it ages past that window (including after the storm ends). Full path lingers for 1 week after the storm’s last fix.
 - **Scrubber** — jump to any day/time
 - Markers sized/colored by status; hurricanes use Saffir–Simpson Cat 1–5 by max wind (kt). Hover for name, year, category, and wind.
 

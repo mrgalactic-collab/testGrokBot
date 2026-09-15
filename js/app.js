@@ -74,6 +74,7 @@
     trailMode: "off",
     layer: null,
     trailLayer: null,
+    keyIndex: null,
   };
 
   const els = {
@@ -149,32 +150,99 @@
     els.legend.innerHTML = "<h2>Status</h2>" + items.join("");
   }
 
-  function findTrackIndex(trackPts, frameKey, lat, lon) {
-    // Prefer last matching key (storm may revisit same MMDD across NYE rarely);
-    // match lat/lon when key appears more than once.
-    let fallback = -1;
+  // Full-path linger after storm ends (1 week of synoptic steps)
+  const FULL_PATH_LINGER_FIXES = 28;
+
+  function buildKeyIndex(keys) {
+    const map = Object.create(null);
+    for (let i = 0; i < keys.length; i++) map[keys[i]] = i;
+    return map;
+  }
+
+  function addTrailSegments(segments, slice) {
+    if (slice.length < 2) return;
+    for (let j = 1; j < slice.length; j++) {
+      const a = slice[j - 1];
+      const b = slice[j];
+      const col = colorFor(b[2], b[3]);
+      segments.push(
+        L.polyline(
+          [
+            [a[0], a[1]],
+            [b[0], b[1]],
+          ],
+          {
+            color: col,
+            weight: 1.5,
+            opacity: 0.35,
+            lineCap: "round",
+            lineJoin: "round",
+            interactive: false,
+            renderer: state.renderer,
+          }
+        )
+      );
+    }
+  }
+
+  function trailSliceForTrack(trackPts, currentIdx, mode) {
+    const keyIndex = state.keyIndex;
+    if (!trackPts.length) return [];
+
+    const calIdx = [];
     for (let i = 0; i < trackPts.length; i++) {
-      const tp = trackPts[i];
-      if (tp[4] !== frameKey) continue;
-      fallback = i;
-      if (tp[0] === lat && tp[1] === lon) return i;
+      const ki = keyIndex[trackPts[i][4]];
+      calIdx.push(ki == null ? -1 : ki);
     }
-    return fallback;
-  }
 
-  function trailSlice(trackPts, endIdx, mode) {
-    if (endIdx < 0 || !trackPts.length) return [];
     const n = TRAIL_FIXES[mode];
-    if (n === 0) return [];
-    if (n == null) {
-      // full path through current fix
-      return trackPts.slice(0, endIdx + 1);
+
+    // Sliding window: keep each track point until it is older than the
+    // selected trail length on the day-of-year timeline (storm can be over).
+    if (n != null) {
+      if (n === 0) return [];
+      const windowStart = currentIdx - n + 1;
+      const out = [];
+      for (let i = 0; i < trackPts.length; i++) {
+        const ki = calIdx[i];
+        if (ki < 0) continue;
+        if (ki >= windowStart && ki <= currentIdx) out.push(trackPts[i]);
+      }
+      return out;
     }
-    const start = Math.max(0, endIdx - n + 1);
-    return trackPts.slice(start, endIdx + 1);
+
+    // Full path: grow through current time, then linger 1 week past last fix.
+    let firstKi = Infinity;
+    let lastKi = -Infinity;
+    let lastTrackI = -1;
+    for (let i = 0; i < calIdx.length; i++) {
+      const ki = calIdx[i];
+      if (ki < 0) continue;
+      if (ki < firstKi) firstKi = ki;
+      if (ki > lastKi) {
+        lastKi = ki;
+        lastTrackI = i;
+      }
+    }
+    if (lastTrackI < 0) return [];
+    if (currentIdx < firstKi) return [];
+    if (currentIdx > lastKi + FULL_PATH_LINGER_FIXES) return [];
+
+    if (currentIdx <= lastKi) {
+      const out = [];
+      for (let i = 0; i < trackPts.length; i++) {
+        const ki = calIdx[i];
+        if (ki < 0) continue;
+        if (ki <= currentIdx) out.push(trackPts[i]);
+      }
+      return out;
+    }
+
+    // Within linger window after storm ended: entire path
+    return trackPts.slice();
   }
 
-  function drawTrails(points, frameKey) {
+  function drawTrails(currentIdx) {
     if (state.trailLayer) {
       state.map.removeLayer(state.trailLayer);
       state.trailLayer = null;
@@ -186,44 +254,13 @@
     }
 
     const segments = [];
-    const seen = new Set();
-
-    for (let i = 0; i < points.length; i++) {
-      const p = points[i];
-      const sid = p[6];
-      if (!sid || seen.has(sid)) continue;
-      seen.add(sid);
-
-      const track = state.data.tracks[sid];
+    const tracks = state.data.tracks;
+    for (const sid in tracks) {
+      if (!Object.prototype.hasOwnProperty.call(tracks, sid)) continue;
+      const track = tracks[sid];
       if (!track || !track.pts || track.pts.length < 2) continue;
-
-      const endIdx = findTrackIndex(track.pts, frameKey, p[0], p[1]);
-      const slice = trailSlice(track.pts, endIdx, mode);
-      if (slice.length < 2) continue;
-
-      for (let j = 1; j < slice.length; j++) {
-        const a = slice[j - 1];
-        const b = slice[j];
-        // Color segment by the later vertex status/wind
-        const col = colorFor(b[2], b[3]);
-        segments.push(
-          L.polyline(
-            [
-              [a[0], a[1]],
-              [b[0], b[1]],
-            ],
-            {
-              color: col,
-              weight: 1.5,
-              opacity: 0.35,
-              lineCap: "round",
-              lineJoin: "round",
-              interactive: false,
-              renderer: state.renderer,
-            }
-          )
-        );
-      }
+      const slice = trailSliceForTrack(track.pts, currentIdx, mode);
+      addTrailSegments(segments, slice);
     }
 
     state.trailLayer = L.layerGroup(segments).addTo(state.map);
@@ -234,7 +271,7 @@
     const key = keys[idx];
     const points = state.data.frames[key] || [];
 
-    drawTrails(points, key);
+    drawTrails(idx);
 
     if (state.layer) {
       state.map.removeLayer(state.layer);
@@ -349,6 +386,7 @@
     const resp = await fetch("data/frames.json");
     if (!resp.ok) throw new Error("Failed to load data/frames.json");
     state.data = await resp.json();
+    state.keyIndex = buildKeyIndex(state.data.keys);
 
     const meta = state.data.meta || {};
     els.years.textContent = meta.year_min && meta.year_max
