@@ -32,7 +32,8 @@
     5: 10,
   };
 
-  const NON_HU_RADIUS = 4.5;
+  // Match Cat 1 so TD/TS/EX/etc. use the smallest hurricane marker size
+  const NON_HU_RADIUS = HU_CAT_RADIUS[1];
 
   const STATUS_LABELS = {
     TD: "Tropical Depression",
