@@ -3,20 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Atlantic HURDAT2 — Day-of-Year Animation</title>
+  <title>HURDAT2 — Day-of-Year Animation</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <div id="map" role="application" aria-label="Atlantic tropical cyclone map"></div>
+  <div id="map" role="application" aria-label="Tropical cyclone map"></div>
 
   <div id="loading" class="loading">Loading HURDAT2 frames…</div>
 
   <header class="panel header">
-    <h1>Atlantic HURDAT2 Composite</h1>
-    <p>All years stacked on the same calendar day &amp; 6-hour synoptic time (UTC). Data: NHC HURDAT2.</p>
+    <h1 id="title">HURDAT2 Composite</h1>
+    <div class="basin-tabs" role="tablist" aria-label="Basin">
+      <button type="button" class="basin-tab active" role="tab" aria-selected="true"
+              data-basin="atlantic" id="tab-atlantic">Atlantic</button>
+      <button type="button" class="basin-tab" role="tab" aria-selected="false"
+              data-basin="pacific" id="tab-pacific">Pacific</button>
+    </div>
+    <p id="subtitle">All years stacked on the same calendar day &amp; 6-hour synoptic time (UTC). Data: NHC HURDAT2.</p>
     <p id="years" class="meta-line" style="margin-top:6px"></p>
   </header>
 
