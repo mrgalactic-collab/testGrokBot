@@ -163,17 +163,25 @@
     return STATUS_LABELS[status] || status;
   }
 
+  /** Legend swatch diameter (px); Cat n uses 6+n so sizes scale with HU_CAT_RADIUS. */
+  function legendSwatchPx(cat) {
+    return 6 + cat;
+  }
+
   function buildLegend() {
     const items = [];
-    for (let c = 1; c <= 5; c++) {
+    // Cat 5 at top → Cat 1; non-HU follow at Cat 1 size (matches NON_HU_RADIUS)
+    const cat1Px = legendSwatchPx(1);
+    for (let c = 5; c >= 1; c--) {
+      const px = legendSwatchPx(c);
       items.push(
-        `<div class="legend-item"><span class="swatch" style="background:${HU_CAT_COLORS[c]};width:${6 + c}px;height:${6 + c}px"></span>Hurricane Cat ${c}</div>`
+        `<div class="legend-item"><span class="swatch" style="background:${HU_CAT_COLORS[c]};width:${px}px;height:${px}px"></span>Hurricane Cat ${c}</div>`
       );
     }
     const rest = ["TS", "TD", "SS", "SD", "EX", "LO", "DB", "WV", "OTHER"];
     for (const s of rest) {
       items.push(
-        `<div class="legend-item"><span class="swatch" style="background:${STATUS_COLORS[s]}"></span>${STATUS_LABELS[s]}</div>`
+        `<div class="legend-item"><span class="swatch" style="background:${STATUS_COLORS[s]};width:${cat1Px}px;height:${cat1Px}px"></span>${STATUS_LABELS[s]}</div>`
       );
     }
     els.legend.innerHTML =
