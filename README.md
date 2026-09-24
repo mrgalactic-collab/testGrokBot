@@ -55,7 +55,7 @@ Raw files are stored as `data/hurdat2-atlantic.txt` and `data/hurdat2-pacific.tx
 ## Map views
 
 - Atlantic: ~5°N–50°N, 100°W–20°W
-- Pacific (NE/NC): ~0°N–45°N, 180°–80°W (Mexico / Central America through Hawaii toward the Date Line)
+- Pacific (NE/NC): ~0°N–50°N, ~150°E–80°W continuous view (Mexico / Central America through Hawaii across the Date Line; E longitudes wrapped)
 
 ## Data credit
 

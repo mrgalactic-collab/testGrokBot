@@ -84,7 +84,7 @@
       dataUrl: "data/frames-pacific.json",
       // Mexico / Central America through Hawaii toward/west of the Date Line
       // Lon < -180 holds NEPAC fixes recorded east of 180° after wrap
-      bounds: [[0, -185], [45, -80]],
+      bounds: [[0, -210], [50, -80]],
     },
   };
 
