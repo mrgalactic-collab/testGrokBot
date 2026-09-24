@@ -27,6 +27,22 @@ Open [http://localhost:8000/](http://localhost:8000/).
 > Opening `index.html` via `file://` will not load frame JSON in most
 > browsers (CORS). Always use a local HTTP server.
 
+
+## Branches
+
+- **`main`** — stable desktop-first UI (Atlantic/Pacific tabs, Cat 1–sized non-HU markers).
+- **`beta`** — mobile-friendly layout (compact tabs/controls, collapsible Legend on small viewports). Desktop widths (≥769px) match `main`.
+
+## Mobile layout (`beta`)
+
+On viewports **≤768px**:
+
+- Basin tabs and play controls shrink to free map space
+- Status legend collapses to a **Legend** toggle (tap to expand)
+- Long header subtitle / year range hide so the map stays usable
+
+Desktop (≥769px) is unchanged. Try Chrome DevTools device mode or open the page on a phone after serving locally.
+
 ## Regenerate data
 
 ```bash
