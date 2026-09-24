@@ -1,4 +1,4 @@
-/* Atlantic HURDAT2 composite day-of-year animation */
+/* HURDAT2 composite day-of-year animation (Atlantic + NE/NC Pacific) */
 (function () {
   "use strict";
 
@@ -32,7 +32,8 @@
     5: 10,
   };
 
-  const NON_HU_RADIUS = 4.5;
+  // Match Cat 1 so TD/TS/etc. are as visible as the smallest hurricanes
+  const NON_HU_RADIUS = HU_CAT_RADIUS[1];
 
   const STATUS_LABELS = {
     TD: "Tropical Depression",
@@ -65,6 +66,28 @@
     full: null,
   };
 
+  const BASINS = {
+    atlantic: {
+      id: "atlantic",
+      title: "Atlantic HURDAT2 Composite",
+      subtitle:
+        "All years stacked on the same calendar day & 6-hour synoptic time (UTC). Data: NHC HURDAT2 Atlantic.",
+      dataUrl: "data/frames-atlantic.json",
+      // ~ 5N–50N, 100W–20W
+      bounds: [[5, -100], [50, -20]],
+    },
+    pacific: {
+      id: "pacific",
+      title: "Pacific HURDAT2 Composite",
+      subtitle:
+        "NE/NC Pacific (EP/CP). All years stacked on the same calendar day & 6-hour synoptic time (UTC). Data: NHC HURDAT2 NEPAC — not Western Pacific / JTWC.",
+      dataUrl: "data/frames-pacific.json",
+      // Mexico / Central America through Hawaii toward/west of the Date Line
+      // Lon < -180 holds NEPAC fixes recorded east of 180° after wrap
+      bounds: [[0, -210], [50, -80]],
+    },
+  };
+
   const state = {
     data: null,
     index: 0,
@@ -75,6 +98,10 @@
     layer: null,
     trailLayer: null,
     keyIndex: null,
+    basin: "atlantic",
+    cache: Object.create(null),
+    map: null,
+    renderer: null,
   };
 
   const els = {
@@ -88,6 +115,8 @@
     loading: null,
     legend: null,
     years: null,
+    title: null,
+    subtitle: null,
   };
 
   function formatKey(key) {
@@ -242,13 +271,24 @@
     return trackPts.slice();
   }
 
+  function clearLayers() {
+    if (state.trailLayer) {
+      state.map.removeLayer(state.trailLayer);
+      state.trailLayer = null;
+    }
+    if (state.layer) {
+      state.map.removeLayer(state.layer);
+      state.layer = null;
+    }
+  }
+
   function drawTrails(currentIdx) {
     if (state.trailLayer) {
       state.map.removeLayer(state.trailLayer);
       state.trailLayer = null;
     }
     const mode = state.trailMode;
-    if (mode === "off" || !state.data.tracks) {
+    if (mode === "off" || !state.data || !state.data.tracks) {
       state.trailLayer = L.layerGroup().addTo(state.map);
       return;
     }
@@ -344,6 +384,76 @@
     setIndex(i >= 0 ? i : 0);
   }
 
+  function applyBasinView(basinId) {
+    const cfg = BASINS[basinId];
+    const bounds = L.latLngBounds(cfg.bounds[0], cfg.bounds[1]);
+    state.map.setMaxBounds(null);
+    state.map.fitBounds(bounds, { padding: [20, 20] });
+    state.map.setMaxBounds(bounds.pad(0.35));
+  }
+
+  function updateBasinTabs(basinId) {
+    document.querySelectorAll(".basin-tab").forEach((btn) => {
+      const active = btn.getAttribute("data-basin") === basinId;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", active ? "true" : "false");
+    });
+  }
+
+  function applyMeta(basinId) {
+    const cfg = BASINS[basinId];
+    els.title.textContent = cfg.title;
+    els.subtitle.textContent = cfg.subtitle;
+    const meta = (state.data && state.data.meta) || {};
+    els.years.textContent = meta.year_min && meta.year_max
+      ? `${meta.year_min}–${meta.year_max} · ${meta.storms?.toLocaleString?.() || meta.storms} storms · ${meta.points?.toLocaleString?.() || meta.points} fixes`
+      : "";
+  }
+
+  async function loadBasinData(basinId) {
+    if (state.cache[basinId]) return state.cache[basinId];
+    const cfg = BASINS[basinId];
+    const resp = await fetch(cfg.dataUrl);
+    if (!resp.ok) throw new Error(`Failed to load ${cfg.dataUrl}`);
+    const data = await resp.json();
+    state.cache[basinId] = data;
+    return data;
+  }
+
+  async function switchBasin(basinId) {
+    if (!BASINS[basinId]) return;
+    if (basinId === state.basin && state.data) return;
+
+    stop();
+    els.loading.classList.remove("hidden");
+    els.loading.textContent = `Loading ${BASINS[basinId].title}…`;
+
+    try {
+      const data = await loadBasinData(basinId);
+      clearLayers();
+      state.basin = basinId;
+      state.data = data;
+      state.keyIndex = buildKeyIndex(data.keys);
+      state.trailLayer = L.layerGroup().addTo(state.map);
+      state.layer = L.layerGroup().addTo(state.map);
+
+      applyBasinView(basinId);
+      updateBasinTabs(basinId);
+      applyMeta(basinId);
+
+      els.scrubber.min = "0";
+      els.scrubber.max = String(data.keys.length - 1);
+      els.scrubber.value = "0";
+
+      jumpToPeakSeason();
+      els.loading.classList.add("hidden");
+    } catch (err) {
+      console.error(err);
+      els.loading.textContent =
+        "Failed to load animation data. Serve this folder over HTTP (see README).";
+    }
+  }
+
   async function init() {
     els.map = document.getElementById("map");
     els.play = document.getElementById("btn-play");
@@ -355,6 +465,8 @@
     els.loading = document.getElementById("loading");
     els.legend = document.getElementById("legend");
     els.years = document.getElementById("years");
+    els.title = document.getElementById("title");
+    els.subtitle = document.getElementById("subtitle");
 
     buildLegend();
 
@@ -373,29 +485,10 @@
       }
     ).addTo(map);
 
-    // Atlantic basin ~ 5N–50N, 100W–20W
-    const bounds = L.latLngBounds([5, -100], [50, -20]);
-    map.fitBounds(bounds, { padding: [20, 20] });
-    map.setMaxBounds(bounds.pad(0.35));
-
     state.map = map;
     state.renderer = L.canvas({ padding: 0.5 });
     state.trailLayer = L.layerGroup().addTo(map);
     state.layer = L.layerGroup().addTo(map);
-
-    const resp = await fetch("data/frames.json");
-    if (!resp.ok) throw new Error("Failed to load data/frames.json");
-    state.data = await resp.json();
-    state.keyIndex = buildKeyIndex(state.data.keys);
-
-    const meta = state.data.meta || {};
-    els.years.textContent = meta.year_min && meta.year_max
-      ? `${meta.year_min}–${meta.year_max} · ${meta.storms?.toLocaleString?.() || meta.storms} storms · ${meta.points?.toLocaleString?.() || meta.points} fixes`
-      : "";
-
-    els.scrubber.min = "0";
-    els.scrubber.max = String(state.data.keys.length - 1);
-    els.scrubber.value = "0";
 
     state.trailMode = els.trails.value;
 
@@ -416,8 +509,14 @@
       renderFrame(state.index);
     });
 
-    jumpToPeakSeason();
-    els.loading.classList.add("hidden");
+    document.querySelectorAll(".basin-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-basin");
+        switchBasin(id);
+      });
+    });
+
+    await switchBasin("atlantic");
   }
 
   document.addEventListener("DOMContentLoaded", () => {

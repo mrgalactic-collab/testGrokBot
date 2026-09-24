@@ -178,3 +178,41 @@ select#speed, select#trails {
 .legend .swatch {
   flex-shrink: 0;
 }
+
+.basin-tabs {
+  display: inline-flex;
+  gap: 0;
+  margin: 8px 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.basin-tab {
+  appearance: none;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 88px;
+}
+
+.basin-tab + .basin-tab {
+  border-left: 1px solid var(--border);
+}
+
+.basin-tab:hover {
+  color: var(--text);
+  border-color: transparent;
+}
+
+.basin-tab.active {
+  background: linear-gradient(180deg, #0ea5e9, #0284c7);
+  color: #fff;
+}
