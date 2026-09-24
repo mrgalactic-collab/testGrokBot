@@ -50,6 +50,8 @@ BASINS = {
         "fallback_raw": None,
         "out_path": DATA_DIR / "frames-pacific.json",
         "legacy_out": None,
+        # Keep Date Line–crossing tracks continuous on a Pacific-centered map
+        "wrap_east_lon": True,
     },
 }
 
@@ -165,6 +167,10 @@ def preprocess(raw_path: Path, cfg: dict) -> dict:
             key = f"{mmdd}-{time_s}"
             lat_r = round(lat, 2)
             lon_r = round(lon, 2)
+            # NEPAC storms west of the Date Line are recorded as E longitudes;
+            # shift them left of -180 so Leaflet shows a continuous Pacific view.
+            if cfg.get("wrap_east_lon") and lon_r > 0:
+                lon_r = round(lon_r - 360.0, 2)
 
             frames[key].append(
                 [lat_r, lon_r, storm_name, year, status, wind, storm_id]

@@ -82,9 +82,9 @@
       subtitle:
         "NE/NC Pacific (EP/CP). All years stacked on the same calendar day & 6-hour synoptic time (UTC). Data: NHC HURDAT2 NEPAC — not Western Pacific / JTWC.",
       dataUrl: "data/frames-pacific.json",
-      // Mexico / Central America through Hawaii toward the Date Line
-      // ~ 0N–45N, 180W–80W (Leaflet lon: -180 to -80)
-      bounds: [[0, -180], [45, -80]],
+      // Mexico / Central America through Hawaii toward/west of the Date Line
+      // Lon < -180 holds NEPAC fixes recorded east of 180° after wrap
+      bounds: [[0, -185], [45, -80]],
     },
   };
 
