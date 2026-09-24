@@ -176,7 +176,18 @@
         `<div class="legend-item"><span class="swatch" style="background:${STATUS_COLORS[s]}"></span>${STATUS_LABELS[s]}</div>`
       );
     }
-    els.legend.innerHTML = "<h2>Status</h2>" + items.join("");
+    els.legend.innerHTML =
+      '<button type="button" class="legend-toggle" aria-expanded="false" aria-controls="legend-body" id="legend-toggle">Legend</button>' +
+      '<div class="legend-body" id="legend-body">' +
+      '<h2 class="legend-title">Status</h2>' +
+      items.join("") +
+      "</div>";
+    els.legend.classList.remove("is-open");
+    const toggle = document.getElementById("legend-toggle");
+    toggle.addEventListener("click", () => {
+      const open = els.legend.classList.toggle("is-open");
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
   }
 
   // Full-path linger after storm ends (1 week of synoptic steps)
