@@ -27,6 +27,22 @@ Open [http://localhost:8000/](http://localhost:8000/).
 > Opening `index.html` via `file://` will not load frame JSON in most
 > browsers (CORS). Always use a local HTTP server.
 
+
+## Branches
+
+- **`main`** — stable desktop-first UI (Atlantic/Pacific tabs, Cat 1–sized non-HU markers).
+- **`beta`** — mobile-friendly layout (compact tabs/controls, collapsible Legend on small viewports). Desktop widths (≥769px) match `main`.
+
+## Mobile layout (`beta`)
+
+On viewports **≤768px**:
+
+- Basin tabs and play controls shrink to free map space
+- Status legend collapses to a **Legend** toggle (tap to expand)
+- Long header subtitle / year range hide so the map stays usable
+
+Desktop (≥769px) is unchanged. Try Chrome DevTools device mode or open the page on a phone after serving locally.
+
 ## Regenerate data
 
 ```bash
@@ -48,6 +64,7 @@ Raw files are stored as `data/hurdat2-atlantic.txt` and `data/hurdat2-pacific.tx
 - **Atlantic | Pacific** — switch basin (reloads frames, resets map view)
 - **Play / Pause** — step through the year every 6 hours
 - **Speed** — frame interval (default 500 ms)
+- **Filter** — a button in the title card. Name, Strength Reached, Only Display, and Years each stay closed until you click that name. **Name** keeps storms whose name contains the text. **Years** keeps storms from From through To, and the Include box can list extra years (1969, 1992). A storm has to pass every filter you set. Switching basins resets From and To to that basin's full span.
 - **Trails** — Off, 1–6 days, 1 week, or Full path. Sliding lengths keep each segment until it ages past that window (including after the storm ends). Full path lingers for 1 week after the storm’s last fix.
 - **Scrubber** — jump to any day/time
 - Markers sized/colored by status; hurricanes use Saffir–Simpson Cat 1–5 by max wind (kt). Non-hurricane markers match Cat 1 size. Hover for name, year, category, and wind.

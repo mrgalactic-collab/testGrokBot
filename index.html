@@ -24,6 +24,64 @@
     </div>
     <p id="subtitle">All years stacked on the same calendar day &amp; 6-hour synoptic time (UTC). Data: NHC HURDAT2.</p>
     <p id="years" class="meta-line" style="margin-top:6px"></p>
+
+    <div class="filter-panel" id="filters">
+      <button type="button" id="filter-toggle" aria-expanded="false" aria-controls="filter-body">Filter</button>
+      <div id="filter-body" class="filter-body">
+        <div class="filter-section">
+          <button type="button" class="filter-section-toggle" aria-expanded="false" aria-controls="strength-list">Strength Reached</button>
+        <div id="strength-list" class="filter-checks" role="group" aria-label="Strength reached">
+          <label><input type="checkbox" name="strength" value="HU5"> Hurricane Cat 5</label>
+          <label><input type="checkbox" name="strength" value="HU4"> Hurricane Cat 4</label>
+          <label><input type="checkbox" name="strength" value="HU3"> Hurricane Cat 3</label>
+          <label><input type="checkbox" name="strength" value="HU2"> Hurricane Cat 2</label>
+          <label><input type="checkbox" name="strength" value="HU1"> Hurricane Cat 1</label>
+          <label><input type="checkbox" name="strength" value="TS"> Tropical Storm</label>
+          <label><input type="checkbox" name="strength" value="TD"> Tropical Depression</label>
+          <label><input type="checkbox" name="strength" value="SS"> Subtropical Storm</label>
+          <label><input type="checkbox" name="strength" value="SD"> Subtropical Depression</label>
+          <label><input type="checkbox" name="strength" value="EX"> Extratropical</label>
+          <label><input type="checkbox" name="strength" value="LO"> Low</label>
+          <label><input type="checkbox" name="strength" value="DB"> Disturbance</label>
+          <label><input type="checkbox" name="strength" value="WV"> Tropical Wave</label>
+          <label><input type="checkbox" name="strength" value="OTHER"> Other</label>
+        </div>
+                </div>
+        <div class="filter-section">
+          <button type="button" class="filter-section-toggle" aria-expanded="false" aria-controls="only-list">Only Display</button>
+        <div id="only-list" class="filter-checks" role="group" aria-label="Only display">
+          <label><input type="checkbox" name="only" value="HU5"> Hurricane Cat 5</label>
+          <label><input type="checkbox" name="only" value="HU4"> Hurricane Cat 4</label>
+          <label><input type="checkbox" name="only" value="HU3"> Hurricane Cat 3</label>
+          <label><input type="checkbox" name="only" value="HU2"> Hurricane Cat 2</label>
+          <label><input type="checkbox" name="only" value="HU1"> Hurricane Cat 1</label>
+          <label><input type="checkbox" name="only" value="TS"> Tropical Storm</label>
+          <label><input type="checkbox" name="only" value="TD"> Tropical Depression</label>
+          <label><input type="checkbox" name="only" value="SS"> Subtropical Storm</label>
+          <label><input type="checkbox" name="only" value="SD"> Subtropical Depression</label>
+          <label><input type="checkbox" name="only" value="EX"> Extratropical</label>
+          <label><input type="checkbox" name="only" value="LO"> Low</label>
+          <label><input type="checkbox" name="only" value="DB"> Disturbance</label>
+          <label><input type="checkbox" name="only" value="WV"> Tropical Wave</label>
+          <label><input type="checkbox" name="only" value="OTHER"> Other</label>
+        </div>
+        </div>
+        <div class="filter-section">
+          <button type="button" class="filter-section-toggle" aria-expanded="false" aria-controls="name-list">Name</button>
+          <div id="name-list" class="filter-text">
+            <input id="storm-name" type="text" placeholder="e.g. Andrew" aria-label="Storm name contains" autocomplete="off">
+          </div>
+        </div>
+        <div class="filter-section">
+          <button type="button" class="filter-section-toggle" aria-expanded="false" aria-controls="year-list">Years</button>
+          <div id="year-list" class="filter-years">
+            <label>From <input id="year-from" type="number" inputmode="numeric" aria-label="First year to show"></label>
+            <label>To <input id="year-to" type="number" inputmode="numeric" aria-label="Last year to show"></label>
+            <label class="year-include">Include <input id="year-list-text" type="text" placeholder="1969, 1992, 2005" aria-label="Years to include" autocomplete="off"></label>
+          </div>
+        </div>
+      </div>
+    </div>
   </header>
 
   <aside id="legend" class="panel legend" aria-label="Status legend"></aside>

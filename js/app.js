@@ -88,6 +88,15 @@
     },
   };
 
+  // Legend order. "Or higher" uses wind strength, not the legend's visual
+  // order: Cat 5 … Cat 1, then tropical storm, subtropical storm,
+  // tropical depression, subtropical depression, then the rest.
+  const LEVEL_RANK = {
+    HU5: 14, HU4: 13, HU3: 12, HU2: 11, HU1: 10,
+    TS: 9, SS: 8, TD: 7, SD: 6,
+    EX: 5, LO: 4, DB: 3, WV: 2, OTHER: 1,
+  };
+
   const state = {
     data: null,
     index: 0,
@@ -95,6 +104,12 @@
     timer: null,
     intervalMs: 500,
     trailMode: "off",
+    strengthOn: null,
+    onlyOn: null,
+    yearMin: null,
+    yearMax: null,
+    yearList: null,
+    nameQuery: "",
     layer: null,
     trailLayer: null,
     keyIndex: null,
@@ -110,6 +125,7 @@
     scrubber: null,
     speed: null,
     trails: null,
+    filters: null,
     datetime: null,
     count: null,
     loading: null,
@@ -154,6 +170,103 @@
     return NON_HU_RADIUS;
   }
 
+  function indexPeaks(data) {
+    const peaks = Object.create(null);
+    const tracks = data.tracks || {};
+    for (const sid in tracks) {
+      if (!Object.prototype.hasOwnProperty.call(tracks, sid)) continue;
+      const pts = (tracks[sid] && tracks[sid].pts) || [];
+      let best = 0;
+      let bestId = "OTHER";
+      for (let i = 0; i < pts.length; i++) {
+        const id = fixLevelId(pts[i][2], pts[i][3]);
+        const rank = LEVEL_RANK[id] || 0;
+        if (rank > best) {
+          best = rank;
+          bestId = id;
+        }
+      }
+      peaks[sid] = bestId;
+    }
+    data.peakIndex = peaks;
+  }
+
+  /** Legend id for one fix. Hurricane cats come from wind; other statuses match the code. */
+  function fixLevelId(status, wind) {
+    if (status === "HU") {
+      const cat = huCategory(wind) || 1;
+      return "HU" + cat;
+    }
+    return LEVEL_RANK[status] ? status : "OTHER";
+  }
+
+  function checkedSet(name) {
+    const boxes = document.querySelectorAll('#filter-body input[name="' + name + '"]:checked');
+    if (!boxes.length) return null;
+    const set = new Set();
+    for (let i = 0; i < boxes.length; i++) set.add(boxes[i].value);
+    return set;
+  }
+
+  function readYear(id) {
+    const el = document.getElementById(id);
+    if (!el || el.value === "") return null;
+    const n = parseInt(el.value, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function parseYearList(text) {
+    if (!text) return null;
+    const found = text.match(/\d{4}/g);
+    if (!found || !found.length) return null;
+    const set = new Set();
+    for (let i = 0; i < found.length; i++) set.add(parseInt(found[i], 10));
+    return set;
+  }
+
+  function syncFilters() {
+    state.strengthOn = checkedSet("strength");
+    state.onlyOn = checkedSet("only");
+    state.yearMin = readYear("year-from");
+    state.yearMax = readYear("year-to");
+    const listEl = document.getElementById("year-list-text");
+    state.yearList = parseYearList(listEl ? listEl.value : "");
+    const nameEl = document.getElementById("storm-name");
+    state.nameQuery = nameEl ? nameEl.value.trim().toLowerCase() : "";
+  }
+
+  function yearVisible(sid) {
+    const track = state.data && state.data.tracks && state.data.tracks[sid];
+    if (state.yearMin == null && state.yearMax == null && !state.yearList) return true;
+    if (!track || track.year == null) return false;
+    if (state.yearMin != null && track.year < state.yearMin) return false;
+    if (state.yearMax != null && track.year > state.yearMax) return false;
+    if (state.yearList && !state.yearList.has(track.year)) return false;
+    return true;
+  }
+
+  function nameVisible(sid) {
+    if (!state.nameQuery) return true;
+    const track = state.data && state.data.tracks && state.data.tracks[sid];
+    if (!track || !track.name) return false;
+    return String(track.name).toLowerCase().indexOf(state.nameQuery) !== -1;
+  }
+
+  function stormVisible(sid) {
+    if (!yearVisible(sid) || !nameVisible(sid)) return false;
+    const set = state.strengthOn;
+    if (!set) return true;
+    if (!state.data || !state.data.peakIndex) return false;
+    const peak = state.data.peakIndex[sid];
+    return peak != null && set.has(peak);
+  }
+
+  function pointVisible(status, wind) {
+    const set = state.onlyOn;
+    if (!set) return true;
+    return set.has(fixLevelId(status, wind));
+  }
+
   function statusLabel(status, wind) {
     if (status === "HU") {
       const cat = huCategory(wind);
@@ -163,20 +276,39 @@
     return STATUS_LABELS[status] || status;
   }
 
+  /** Legend swatch diameter (px); Cat n uses 6+n so sizes scale with HU_CAT_RADIUS. */
+  function legendSwatchPx(cat) {
+    return 6 + cat;
+  }
+
   function buildLegend() {
     const items = [];
-    for (let c = 1; c <= 5; c++) {
+    // Cat 5 at top → Cat 1; non-HU follow at Cat 1 size (matches NON_HU_RADIUS)
+    const cat1Px = legendSwatchPx(1);
+    for (let c = 5; c >= 1; c--) {
+      const px = legendSwatchPx(c);
       items.push(
-        `<div class="legend-item"><span class="swatch" style="background:${HU_CAT_COLORS[c]};width:${6 + c}px;height:${6 + c}px"></span>Hurricane Cat ${c}</div>`
+        `<div class="legend-item"><span class="swatch" style="background:${HU_CAT_COLORS[c]};width:${px}px;height:${px}px"></span>Hurricane Cat ${c}</div>`
       );
     }
     const rest = ["TS", "TD", "SS", "SD", "EX", "LO", "DB", "WV", "OTHER"];
     for (const s of rest) {
       items.push(
-        `<div class="legend-item"><span class="swatch" style="background:${STATUS_COLORS[s]}"></span>${STATUS_LABELS[s]}</div>`
+        `<div class="legend-item"><span class="swatch" style="background:${STATUS_COLORS[s]};width:${cat1Px}px;height:${cat1Px}px"></span>${STATUS_LABELS[s]}</div>`
       );
     }
-    els.legend.innerHTML = "<h2>Status</h2>" + items.join("");
+    els.legend.innerHTML =
+      '<button type="button" class="legend-toggle" aria-expanded="false" aria-controls="legend-body" id="legend-toggle">Legend</button>' +
+      '<div class="legend-body" id="legend-body">' +
+      '<h2 class="legend-title">Status</h2>' +
+      items.join("") +
+      "</div>";
+    els.legend.classList.remove("is-open");
+    const toggle = document.getElementById("legend-toggle");
+    toggle.addEventListener("click", () => {
+      const open = els.legend.classList.toggle("is-open");
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
   }
 
   // Full-path linger after storm ends (1 week of synoptic steps)
@@ -193,6 +325,7 @@
     for (let j = 1; j < slice.length; j++) {
       const a = slice[j - 1];
       const b = slice[j];
+      if (!pointVisible(a[2], a[3]) || !pointVisible(b[2], b[3])) continue;
       const col = colorFor(b[2], b[3]);
       segments.push(
         L.polyline(
@@ -297,6 +430,7 @@
     const tracks = state.data.tracks;
     for (const sid in tracks) {
       if (!Object.prototype.hasOwnProperty.call(tracks, sid)) continue;
+      if (!stormVisible(sid)) continue;
       const track = tracks[sid];
       if (!track || !track.pts || track.pts.length < 2) continue;
       const slice = trailSliceForTrack(track.pts, currentIdx, mode);
@@ -317,14 +451,18 @@
       state.map.removeLayer(state.layer);
     }
     const markers = [];
+    let shown = 0;
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
+      if (!stormVisible(p[6])) continue;
       const lat = p[0];
       const lon = p[1];
       const name = p[2];
       const year = p[3];
       const status = p[4];
       const wind = p[5];
+      if (!pointVisible(status, wind)) continue;
+      shown++;
       const windTxt = wind == null ? "—" : `${wind} kt`;
       const marker = L.circleMarker([lat, lon], {
         radius: radiusFor(status, wind),
@@ -344,7 +482,7 @@
     state.layer = L.layerGroup(markers).addTo(state.map);
 
     els.datetime.textContent = formatKey(key);
-    els.count.textContent = `${points.length} storm fix${points.length === 1 ? "" : "es"}`;
+    els.count.textContent = `${shown} storm fix${shown === 1 ? "" : "es"}`;
     els.scrubber.value = String(idx);
   }
 
@@ -408,6 +546,17 @@
     els.years.textContent = meta.year_min && meta.year_max
       ? `${meta.year_min}–${meta.year_max} · ${meta.storms?.toLocaleString?.() || meta.storms} storms · ${meta.points?.toLocaleString?.() || meta.points} fixes`
       : "";
+    const from = document.getElementById("year-from");
+    const to = document.getElementById("year-to");
+    if (from && to && meta.year_min && meta.year_max) {
+      from.min = String(meta.year_min);
+      from.max = String(meta.year_max);
+      to.min = String(meta.year_min);
+      to.max = String(meta.year_max);
+      from.value = String(meta.year_min);
+      to.value = String(meta.year_max);
+      syncFilters();
+    }
   }
 
   async function loadBasinData(basinId) {
@@ -416,6 +565,7 @@
     const resp = await fetch(cfg.dataUrl);
     if (!resp.ok) throw new Error(`Failed to load ${cfg.dataUrl}`);
     const data = await resp.json();
+    indexPeaks(data);
     state.cache[basinId] = data;
     return data;
   }
@@ -460,6 +610,7 @@
     els.scrubber = document.getElementById("scrubber");
     els.speed = document.getElementById("speed");
     els.trails = document.getElementById("trails");
+    els.filters = document.getElementById("filters");
     els.datetime = document.getElementById("datetime");
     els.count = document.getElementById("count");
     els.loading = document.getElementById("loading");
@@ -507,6 +658,29 @@
     els.trails.addEventListener("change", () => {
       state.trailMode = els.trails.value;
       renderFrame(state.index);
+    });
+    const filterBody = document.getElementById("filter-body");
+    filterBody.addEventListener("change", () => {
+      syncFilters();
+      if (state.data) renderFrame(state.index);
+    });
+    filterBody.addEventListener("input", (ev) => {
+      const t = ev.target;
+      if (!t || t.tagName !== "INPUT" || t.type === "checkbox") return;
+      syncFilters();
+      if (state.data) renderFrame(state.index);
+    });
+    filterBody.addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".filter-section-toggle");
+      if (!btn || !filterBody.contains(btn)) return;
+      const section = btn.parentElement;
+      const open = section.classList.toggle("is-open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    const filterToggle = document.getElementById("filter-toggle");
+    filterToggle.addEventListener("click", () => {
+      const open = els.filters.classList.toggle("is-open");
+      filterToggle.setAttribute("aria-expanded", open ? "true" : "false");
     });
 
     document.querySelectorAll(".basin-tab").forEach((btn) => {
