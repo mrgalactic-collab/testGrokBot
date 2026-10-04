@@ -223,9 +223,31 @@ input[type="range"] {
   gap: 4px;
 }
 
-.filter-body select {
-  width: 100%;
-  max-width: none;
+.filter-heading {
+  margin: 8px 0 4px;
+}
+
+.filter-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 168px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.filter-checks label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.filter-checks input {
+  margin: 0;
+  cursor: pointer;
 }
 
 select#speed, select#trails {

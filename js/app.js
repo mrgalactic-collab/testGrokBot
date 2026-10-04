@@ -104,8 +104,8 @@
     timer: null,
     intervalMs: 500,
     trailMode: "off",
-    minLevel: "all",
-    onlyLevel: "all",
+    strengthOn: null,
+    onlyOn: null,
     layer: null,
     trailLayer: null,
     keyIndex: null,
@@ -121,8 +121,6 @@
     scrubber: null,
     speed: null,
     trails: null,
-    level: null,
-    only: null,
     filters: null,
     datetime: null,
     count: null,
@@ -168,15 +166,6 @@
     return NON_HU_RADIUS;
   }
 
-  /** Higher rank is a stronger peak. */
-  function fixLevelRank(status, wind) {
-    if (status === "HU") {
-      const cat = huCategory(wind) || 1;
-      return LEVEL_RANK["HU" + cat];
-    }
-    return LEVEL_RANK[status] || LEVEL_RANK.OTHER;
-  }
-
   function indexPeaks(data) {
     const peaks = Object.create(null);
     const tracks = data.tracks || {};
@@ -184,27 +173,18 @@
       if (!Object.prototype.hasOwnProperty.call(tracks, sid)) continue;
       const pts = (tracks[sid] && tracks[sid].pts) || [];
       let best = 0;
+      let bestId = "OTHER";
       for (let i = 0; i < pts.length; i++) {
-        const rank = fixLevelRank(pts[i][2], pts[i][3]);
-        if (rank > best) best = rank;
+        const id = fixLevelId(pts[i][2], pts[i][3]);
+        const rank = LEVEL_RANK[id] || 0;
+        if (rank > best) {
+          best = rank;
+          bestId = id;
+        }
       }
-      peaks[sid] = best;
+      peaks[sid] = bestId;
     }
     data.peakIndex = peaks;
-  }
-
-  function selectedLevelRank() {
-    if (state.minLevel === "all") return 0;
-    return LEVEL_RANK[state.minLevel] || 0;
-  }
-
-  function stormVisible(sid) {
-    const limit = selectedLevelRank();
-    if (limit <= 0) return true;
-    if (!state.data || !state.data.peakIndex) return false;
-    const peak = state.data.peakIndex[sid];
-    if (peak == null) return false;
-    return peak >= limit;
   }
 
   /** Legend id for one fix. Hurricane cats come from wind; other statuses match the code. */
@@ -216,9 +196,31 @@
     return LEVEL_RANK[status] ? status : "OTHER";
   }
 
+  function checkedSet(name) {
+    const boxes = document.querySelectorAll('#filter-body input[name="' + name + '"]:checked');
+    if (!boxes.length) return null;
+    const set = new Set();
+    for (let i = 0; i < boxes.length; i++) set.add(boxes[i].value);
+    return set;
+  }
+
+  function syncFilters() {
+    state.strengthOn = checkedSet("strength");
+    state.onlyOn = checkedSet("only");
+  }
+
+  function stormVisible(sid) {
+    const set = state.strengthOn;
+    if (!set) return true;
+    if (!state.data || !state.data.peakIndex) return false;
+    const peak = state.data.peakIndex[sid];
+    return peak != null && set.has(peak);
+  }
+
   function pointVisible(status, wind) {
-    if (state.onlyLevel === "all") return true;
-    return fixLevelId(status, wind) === state.onlyLevel;
+    const set = state.onlyOn;
+    if (!set) return true;
+    return set.has(fixLevelId(status, wind));
   }
 
   function statusLabel(status, wind) {
@@ -553,8 +555,6 @@
     els.scrubber = document.getElementById("scrubber");
     els.speed = document.getElementById("speed");
     els.trails = document.getElementById("trails");
-    els.level = document.getElementById("level");
-    els.only = document.getElementById("only");
     els.filters = document.getElementById("filters");
     els.datetime = document.getElementById("datetime");
     els.count = document.getElementById("count");
@@ -587,8 +587,6 @@
     state.layer = L.layerGroup().addTo(map);
 
     state.trailMode = els.trails.value;
-    state.minLevel = els.level.value;
-    state.onlyLevel = els.only.value;
 
     els.play.addEventListener("click", togglePlay);
     els.scrubber.addEventListener("input", () => {
@@ -606,12 +604,8 @@
       state.trailMode = els.trails.value;
       renderFrame(state.index);
     });
-    els.level.addEventListener("change", () => {
-      state.minLevel = els.level.value;
-      renderFrame(state.index);
-    });
-    els.only.addEventListener("change", () => {
-      state.onlyLevel = els.only.value;
+    document.getElementById("filter-body").addEventListener("change", () => {
+      syncFilters();
       renderFrame(state.index);
     });
     const filterToggle = document.getElementById("filter-toggle");
