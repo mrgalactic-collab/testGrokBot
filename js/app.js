@@ -88,6 +88,15 @@
     },
   };
 
+  // Legend order. "Or higher" uses wind strength, not the legend's visual
+  // order: Cat 5 … Cat 1, then tropical storm, subtropical storm,
+  // tropical depression, subtropical depression, then the rest.
+  const LEVEL_RANK = {
+    HU5: 14, HU4: 13, HU3: 12, HU2: 11, HU1: 10,
+    TS: 9, SS: 8, TD: 7, SD: 6,
+    EX: 5, LO: 4, DB: 3, WV: 2, OTHER: 1,
+  };
+
   const state = {
     data: null,
     index: 0,
@@ -95,6 +104,7 @@
     timer: null,
     intervalMs: 500,
     trailMode: "off",
+    minLevel: "all",
     layer: null,
     trailLayer: null,
     keyIndex: null,
@@ -110,6 +120,7 @@
     scrubber: null,
     speed: null,
     trails: null,
+    level: null,
     datetime: null,
     count: null,
     loading: null,
@@ -152,6 +163,45 @@
       if (cat) return HU_CAT_RADIUS[cat];
     }
     return NON_HU_RADIUS;
+  }
+
+  /** Higher rank is a stronger peak. */
+  function fixLevelRank(status, wind) {
+    if (status === "HU") {
+      const cat = huCategory(wind) || 1;
+      return LEVEL_RANK["HU" + cat];
+    }
+    return LEVEL_RANK[status] || LEVEL_RANK.OTHER;
+  }
+
+  function indexPeaks(data) {
+    const peaks = Object.create(null);
+    const tracks = data.tracks || {};
+    for (const sid in tracks) {
+      if (!Object.prototype.hasOwnProperty.call(tracks, sid)) continue;
+      const pts = (tracks[sid] && tracks[sid].pts) || [];
+      let best = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const rank = fixLevelRank(pts[i][2], pts[i][3]);
+        if (rank > best) best = rank;
+      }
+      peaks[sid] = best;
+    }
+    data.peakIndex = peaks;
+  }
+
+  function selectedLevelRank() {
+    if (state.minLevel === "all") return 0;
+    return LEVEL_RANK[state.minLevel] || 0;
+  }
+
+  function stormVisible(sid) {
+    const limit = selectedLevelRank();
+    if (limit <= 0) return true;
+    if (!state.data || !state.data.peakIndex) return false;
+    const peak = state.data.peakIndex[sid];
+    if (peak == null) return false;
+    return peak >= limit;
   }
 
   function statusLabel(status, wind) {
@@ -316,6 +366,7 @@
     const tracks = state.data.tracks;
     for (const sid in tracks) {
       if (!Object.prototype.hasOwnProperty.call(tracks, sid)) continue;
+      if (!stormVisible(sid)) continue;
       const track = tracks[sid];
       if (!track || !track.pts || track.pts.length < 2) continue;
       const slice = trailSliceForTrack(track.pts, currentIdx, mode);
@@ -336,8 +387,11 @@
       state.map.removeLayer(state.layer);
     }
     const markers = [];
+    let shown = 0;
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
+      if (!stormVisible(p[6])) continue;
+      shown++;
       const lat = p[0];
       const lon = p[1];
       const name = p[2];
@@ -363,7 +417,7 @@
     state.layer = L.layerGroup(markers).addTo(state.map);
 
     els.datetime.textContent = formatKey(key);
-    els.count.textContent = `${points.length} storm fix${points.length === 1 ? "" : "es"}`;
+    els.count.textContent = `${shown} storm fix${shown === 1 ? "" : "es"}`;
     els.scrubber.value = String(idx);
   }
 
@@ -435,6 +489,7 @@
     const resp = await fetch(cfg.dataUrl);
     if (!resp.ok) throw new Error(`Failed to load ${cfg.dataUrl}`);
     const data = await resp.json();
+    indexPeaks(data);
     state.cache[basinId] = data;
     return data;
   }
@@ -479,6 +534,7 @@
     els.scrubber = document.getElementById("scrubber");
     els.speed = document.getElementById("speed");
     els.trails = document.getElementById("trails");
+    els.level = document.getElementById("level");
     els.datetime = document.getElementById("datetime");
     els.count = document.getElementById("count");
     els.loading = document.getElementById("loading");
@@ -510,6 +566,7 @@
     state.layer = L.layerGroup().addTo(map);
 
     state.trailMode = els.trails.value;
+    state.minLevel = els.level.value;
 
     els.play.addEventListener("click", togglePlay);
     els.scrubber.addEventListener("input", () => {
@@ -525,6 +582,10 @@
     });
     els.trails.addEventListener("change", () => {
       state.trailMode = els.trails.value;
+      renderFrame(state.index);
+    });
+    els.level.addEventListener("change", () => {
+      state.minLevel = els.level.value;
       renderFrame(state.index);
     });
 

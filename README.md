@@ -64,6 +64,7 @@ Raw files are stored as `data/hurdat2-atlantic.txt` and `data/hurdat2-pacific.tx
 - **Atlantic | Pacific** — switch basin (reloads frames, resets map view)
 - **Play / Pause** — step through the year every 6 hours
 - **Speed** — frame interval (default 500 ms)
+- **Reached** — show only storms whose strongest point is the chosen legend level or higher (All storms by default). Markers and trails both follow the filter.
 - **Trails** — Off, 1–6 days, 1 week, or Full path. Sliding lengths keep each segment until it ages past that window (including after the storm ends). Full path lingers for 1 week after the storm’s last fix.
 - **Scrubber** — jump to any day/time
 - Markers sized/colored by status; hurricanes use Saffir–Simpson Cat 1–5 by max wind (kt). Non-hurricane markers match Cat 1 size. Hover for name, year, category, and wind.

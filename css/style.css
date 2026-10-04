@@ -332,7 +332,7 @@ select#speed, select#trails {
     height: 28px;
   }
 
-  select#speed, select#trails {
+  select#speed, select#trails, select#level {
     max-width: 120px;
     flex: 0 1 auto;
   }
