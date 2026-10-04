@@ -109,7 +109,7 @@
     yearMin: null,
     yearMax: null,
     yearList: null,
-    nameQuery: "",
+    nameQuery: null,
     layer: null,
     trailLayer: null,
     keyIndex: null,
@@ -224,6 +224,19 @@
     return set;
   }
 
+  /** Comma-separated name fragments. Empty / blank-only means every name. */
+  function parseNameList(text) {
+    if (!text) return null;
+    const parts = String(text).split(",");
+    const list = [];
+    for (let i = 0; i < parts.length; i++) {
+      const frag = parts[i].trim().toLowerCase();
+      if (!frag) continue;
+      list.push(frag);
+    }
+    return list.length ? list : null;
+  }
+
   function syncFilters() {
     state.strengthOn = checkedSet("strength");
     state.onlyOn = checkedSet("only");
@@ -232,7 +245,7 @@
     const listEl = document.getElementById("year-list-text");
     state.yearList = parseYearList(listEl ? listEl.value : "");
     const nameEl = document.getElementById("storm-name");
-    state.nameQuery = nameEl ? nameEl.value.trim().toLowerCase() : "";
+    state.nameQuery = parseNameList(nameEl ? nameEl.value : "");
   }
 
   function yearVisible(sid) {
@@ -246,10 +259,15 @@
   }
 
   function nameVisible(sid) {
-    if (!state.nameQuery) return true;
+    const queries = state.nameQuery;
+    if (!queries || !queries.length) return true;
     const track = state.data && state.data.tracks && state.data.tracks[sid];
     if (!track || !track.name) return false;
-    return String(track.name).toLowerCase().indexOf(state.nameQuery) !== -1;
+    const name = String(track.name).toLowerCase();
+    for (let i = 0; i < queries.length; i++) {
+      if (name.indexOf(queries[i]) !== -1) return true;
+    }
+    return false;
   }
 
   function stormVisible(sid) {
