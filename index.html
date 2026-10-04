@@ -67,10 +67,17 @@
         </div>
         </div>
         <div class="filter-section">
+          <button type="button" class="filter-section-toggle" aria-expanded="false" aria-controls="name-list">Name</button>
+          <div id="name-list" class="filter-text">
+            <input id="storm-name" type="text" placeholder="e.g. Andrew" aria-label="Storm name contains" autocomplete="off">
+          </div>
+        </div>
+        <div class="filter-section">
           <button type="button" class="filter-section-toggle" aria-expanded="false" aria-controls="year-list">Years</button>
           <div id="year-list" class="filter-years">
             <label>From <input id="year-from" type="number" inputmode="numeric" aria-label="First year to show"></label>
             <label>To <input id="year-to" type="number" inputmode="numeric" aria-label="Last year to show"></label>
+            <label class="year-include">Include <input id="year-list-text" type="text" placeholder="1969, 1992, 2005" aria-label="Years to include" autocomplete="off"></label>
           </div>
         </div>
       </div>

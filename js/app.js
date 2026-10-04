@@ -108,6 +108,8 @@
     onlyOn: null,
     yearMin: null,
     yearMax: null,
+    yearList: null,
+    nameQuery: "",
     layer: null,
     trailLayer: null,
     keyIndex: null,
@@ -213,24 +215,45 @@
     return Number.isFinite(n) ? n : null;
   }
 
+  function parseYearList(text) {
+    if (!text) return null;
+    const found = text.match(/\d{4}/g);
+    if (!found || !found.length) return null;
+    const set = new Set();
+    for (let i = 0; i < found.length; i++) set.add(parseInt(found[i], 10));
+    return set;
+  }
+
   function syncFilters() {
     state.strengthOn = checkedSet("strength");
     state.onlyOn = checkedSet("only");
     state.yearMin = readYear("year-from");
     state.yearMax = readYear("year-to");
+    const listEl = document.getElementById("year-list-text");
+    state.yearList = parseYearList(listEl ? listEl.value : "");
+    const nameEl = document.getElementById("storm-name");
+    state.nameQuery = nameEl ? nameEl.value.trim().toLowerCase() : "";
   }
 
   function yearVisible(sid) {
-    if (state.yearMin == null && state.yearMax == null) return true;
     const track = state.data && state.data.tracks && state.data.tracks[sid];
+    if (state.yearMin == null && state.yearMax == null && !state.yearList) return true;
     if (!track || track.year == null) return false;
     if (state.yearMin != null && track.year < state.yearMin) return false;
     if (state.yearMax != null && track.year > state.yearMax) return false;
+    if (state.yearList && !state.yearList.has(track.year)) return false;
     return true;
   }
 
+  function nameVisible(sid) {
+    if (!state.nameQuery) return true;
+    const track = state.data && state.data.tracks && state.data.tracks[sid];
+    if (!track || !track.name) return false;
+    return String(track.name).toLowerCase().indexOf(state.nameQuery) !== -1;
+  }
+
   function stormVisible(sid) {
-    if (!yearVisible(sid)) return false;
+    if (!yearVisible(sid) || !nameVisible(sid)) return false;
     const set = state.strengthOn;
     if (!set) return true;
     if (!state.data || !state.data.peakIndex) return false;
@@ -642,7 +665,8 @@
       if (state.data) renderFrame(state.index);
     });
     filterBody.addEventListener("input", (ev) => {
-      if (!ev.target || ev.target.type !== "number") return;
+      const t = ev.target;
+      if (!t || t.tagName !== "INPUT" || t.type === "checkbox") return;
       syncFilters();
       if (state.data) renderFrame(state.index);
     });

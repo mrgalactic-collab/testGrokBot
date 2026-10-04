@@ -243,17 +243,30 @@ input[type="range"] {
 }
 
 .filter-section .filter-checks,
-.filter-section .filter-years {
+.filter-section .filter-years,
+.filter-section .filter-text {
   display: none;
 }
 
 .filter-section.is-open .filter-checks,
-.filter-section.is-open .filter-years {
+.filter-section.is-open .filter-years,
+.filter-section.is-open .filter-text {
   display: flex;
+}
+
+.filter-text input,
+.filter-years .year-include input {
+  width: 100%;
+  padding: 4px 6px;
+}
+
+.filter-years .year-include {
+  flex: 1 1 100%;
 }
 
 .filter-years {
   flex-direction: row;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   margin-top: 4px;
