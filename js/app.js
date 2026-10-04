@@ -105,6 +105,7 @@
     intervalMs: 500,
     trailMode: "off",
     minLevel: "all",
+    onlyLevel: "all",
     layer: null,
     trailLayer: null,
     keyIndex: null,
@@ -121,6 +122,8 @@
     speed: null,
     trails: null,
     level: null,
+    only: null,
+    filters: null,
     datetime: null,
     count: null,
     loading: null,
@@ -204,6 +207,20 @@
     return peak >= limit;
   }
 
+  /** Legend id for one fix. Hurricane cats come from wind; other statuses match the code. */
+  function fixLevelId(status, wind) {
+    if (status === "HU") {
+      const cat = huCategory(wind) || 1;
+      return "HU" + cat;
+    }
+    return LEVEL_RANK[status] ? status : "OTHER";
+  }
+
+  function pointVisible(status, wind) {
+    if (state.onlyLevel === "all") return true;
+    return fixLevelId(status, wind) === state.onlyLevel;
+  }
+
   function statusLabel(status, wind) {
     if (status === "HU") {
       const cat = huCategory(wind);
@@ -262,6 +279,7 @@
     for (let j = 1; j < slice.length; j++) {
       const a = slice[j - 1];
       const b = slice[j];
+      if (!pointVisible(a[2], a[3]) || !pointVisible(b[2], b[3])) continue;
       const col = colorFor(b[2], b[3]);
       segments.push(
         L.polyline(
@@ -391,13 +409,14 @@
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
       if (!stormVisible(p[6])) continue;
-      shown++;
       const lat = p[0];
       const lon = p[1];
       const name = p[2];
       const year = p[3];
       const status = p[4];
       const wind = p[5];
+      if (!pointVisible(status, wind)) continue;
+      shown++;
       const windTxt = wind == null ? "—" : `${wind} kt`;
       const marker = L.circleMarker([lat, lon], {
         radius: radiusFor(status, wind),
@@ -535,6 +554,8 @@
     els.speed = document.getElementById("speed");
     els.trails = document.getElementById("trails");
     els.level = document.getElementById("level");
+    els.only = document.getElementById("only");
+    els.filters = document.getElementById("filters");
     els.datetime = document.getElementById("datetime");
     els.count = document.getElementById("count");
     els.loading = document.getElementById("loading");
@@ -567,6 +588,7 @@
 
     state.trailMode = els.trails.value;
     state.minLevel = els.level.value;
+    state.onlyLevel = els.only.value;
 
     els.play.addEventListener("click", togglePlay);
     els.scrubber.addEventListener("input", () => {
@@ -587,6 +609,15 @@
     els.level.addEventListener("change", () => {
       state.minLevel = els.level.value;
       renderFrame(state.index);
+    });
+    els.only.addEventListener("change", () => {
+      state.onlyLevel = els.only.value;
+      renderFrame(state.index);
+    });
+    const filterToggle = document.getElementById("filter-toggle");
+    filterToggle.addEventListener("click", () => {
+      const open = els.filters.classList.toggle("is-open");
+      filterToggle.setAttribute("aria-expanded", open ? "true" : "false");
     });
 
     document.querySelectorAll(".basin-tab").forEach((btn) => {

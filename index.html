@@ -24,6 +24,48 @@
     </div>
     <p id="subtitle">All years stacked on the same calendar day &amp; 6-hour synoptic time (UTC). Data: NHC HURDAT2.</p>
     <p id="years" class="meta-line" style="margin-top:6px"></p>
+
+    <div class="filter-panel" id="filters">
+      <button type="button" id="filter-toggle" aria-expanded="false" aria-controls="filter-body">Filter</button>
+      <div id="filter-body" class="filter-body">
+        <label class="meta-line" for="level">Strength Reached</label>
+        <select id="level" aria-label="Show storms that reached this strength or higher">
+          <option value="all" selected>All storms</option>
+          <option value="HU5">Hurricane Cat 5</option>
+          <option value="HU4">Hurricane Cat 4 or higher</option>
+          <option value="HU3">Hurricane Cat 3 or higher</option>
+          <option value="HU2">Hurricane Cat 2 or higher</option>
+          <option value="HU1">Hurricane Cat 1 or higher</option>
+          <option value="TS">Tropical Storm or higher</option>
+          <option value="TD">Tropical Depression or higher</option>
+          <option value="SS">Subtropical Storm or higher</option>
+          <option value="SD">Subtropical Depression or higher</option>
+          <option value="EX">Extratropical or higher</option>
+          <option value="LO">Low or higher</option>
+          <option value="DB">Disturbance or higher</option>
+          <option value="WV">Tropical Wave or higher</option>
+          <option value="OTHER">Other or higher</option>
+        </select>
+        <label class="meta-line" for="only">Only Display</label>
+        <select id="only" aria-label="Show only points and trail at this exact level">
+          <option value="all" selected>All points</option>
+          <option value="HU5">Hurricane Cat 5</option>
+          <option value="HU4">Hurricane Cat 4</option>
+          <option value="HU3">Hurricane Cat 3</option>
+          <option value="HU2">Hurricane Cat 2</option>
+          <option value="HU1">Hurricane Cat 1</option>
+          <option value="TS">Tropical Storm</option>
+          <option value="TD">Tropical Depression</option>
+          <option value="SS">Subtropical Storm</option>
+          <option value="SD">Subtropical Depression</option>
+          <option value="EX">Extratropical</option>
+          <option value="LO">Low</option>
+          <option value="DB">Disturbance</option>
+          <option value="WV">Tropical Wave</option>
+          <option value="OTHER">Other</option>
+        </select>
+      </div>
+    </div>
   </header>
 
   <aside id="legend" class="panel legend" aria-label="Status legend"></aside>
@@ -41,24 +83,6 @@
         <option value="500" selected>Normal (0.5s)</option>
         <option value="250">Fast (0.25s)</option>
         <option value="100">Very fast (0.1s)</option>
-      </select>
-      <label class="meta-line" for="level">Reached</label>
-      <select id="level" aria-label="Show storms that reached this level or higher">
-        <option value="all" selected>All storms</option>
-        <option value="HU5">Hurricane Cat 5</option>
-        <option value="HU4">Hurricane Cat 4 or higher</option>
-        <option value="HU3">Hurricane Cat 3 or higher</option>
-        <option value="HU2">Hurricane Cat 2 or higher</option>
-        <option value="HU1">Hurricane Cat 1 or higher</option>
-        <option value="TS">Tropical Storm or higher</option>
-        <option value="TD">Tropical Depression or higher</option>
-        <option value="SS">Subtropical Storm or higher</option>
-        <option value="SD">Subtropical Depression or higher</option>
-        <option value="EX">Extratropical or higher</option>
-        <option value="LO">Low or higher</option>
-        <option value="DB">Disturbance or higher</option>
-        <option value="WV">Tropical Wave or higher</option>
-        <option value="OTHER">Other or higher</option>
       </select>
       <label class="meta-line" for="trails">Trails</label>
       <select id="trails" aria-label="Storm trail length">

@@ -202,6 +202,32 @@ input[type="range"] {
   font-weight: 650;
 }
 
+
+.filter-panel {
+  margin-top: 10px;
+}
+
+#filter-toggle {
+  width: 100%;
+  text-align: left;
+}
+
+.filter-body {
+  display: none;
+  margin-top: 8px;
+}
+
+.filter-panel.is-open .filter-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-body select {
+  width: 100%;
+  max-width: none;
+}
+
 select#speed, select#trails {
   max-width: 160px;
 }
@@ -332,7 +358,7 @@ select#speed, select#trails {
     height: 28px;
   }
 
-  select#speed, select#trails, select#level {
+  select#speed, select#trails {
     max-width: 120px;
     flex: 0 1 auto;
   }
