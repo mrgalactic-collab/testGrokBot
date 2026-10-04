@@ -28,8 +28,9 @@
     <div class="filter-panel" id="filters">
       <button type="button" id="filter-toggle" aria-expanded="false" aria-controls="filter-body">Filter</button>
       <div id="filter-body" class="filter-body">
-        <p class="meta-line filter-heading">Strength Reached</p>
-        <div class="filter-checks" role="group" aria-label="Strength reached">
+        <div class="filter-section">
+          <button type="button" class="filter-section-toggle" aria-expanded="false" aria-controls="strength-list">Strength Reached</button>
+        <div id="strength-list" class="filter-checks" role="group" aria-label="Strength reached">
           <label><input type="checkbox" name="strength" value="HU5"> Hurricane Cat 5</label>
           <label><input type="checkbox" name="strength" value="HU4"> Hurricane Cat 4</label>
           <label><input type="checkbox" name="strength" value="HU3"> Hurricane Cat 3</label>
@@ -45,8 +46,10 @@
           <label><input type="checkbox" name="strength" value="WV"> Tropical Wave</label>
           <label><input type="checkbox" name="strength" value="OTHER"> Other</label>
         </div>
-        <p class="meta-line filter-heading">Only Display</p>
-        <div class="filter-checks" role="group" aria-label="Only display">
+                </div>
+        <div class="filter-section">
+          <button type="button" class="filter-section-toggle" aria-expanded="false" aria-controls="only-list">Only Display</button>
+        <div id="only-list" class="filter-checks" role="group" aria-label="Only display">
           <label><input type="checkbox" name="only" value="HU5"> Hurricane Cat 5</label>
           <label><input type="checkbox" name="only" value="HU4"> Hurricane Cat 4</label>
           <label><input type="checkbox" name="only" value="HU3"> Hurricane Cat 3</label>
@@ -61,6 +64,14 @@
           <label><input type="checkbox" name="only" value="DB"> Disturbance</label>
           <label><input type="checkbox" name="only" value="WV"> Tropical Wave</label>
           <label><input type="checkbox" name="only" value="OTHER"> Other</label>
+        </div>
+        </div>
+        <div class="filter-section">
+          <button type="button" class="filter-section-toggle" aria-expanded="false" aria-controls="year-list">Years</button>
+          <div id="year-list" class="filter-years">
+            <label>From <input id="year-from" type="number" inputmode="numeric" aria-label="First year to show"></label>
+            <label>To <input id="year-to" type="number" inputmode="numeric" aria-label="Last year to show"></label>
+          </div>
         </div>
       </div>
     </div>

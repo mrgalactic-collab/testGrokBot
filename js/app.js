@@ -106,6 +106,8 @@
     trailMode: "off",
     strengthOn: null,
     onlyOn: null,
+    yearMin: null,
+    yearMax: null,
     layer: null,
     trailLayer: null,
     keyIndex: null,
@@ -204,12 +206,31 @@
     return set;
   }
 
+  function readYear(id) {
+    const el = document.getElementById(id);
+    if (!el || el.value === "") return null;
+    const n = parseInt(el.value, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+
   function syncFilters() {
     state.strengthOn = checkedSet("strength");
     state.onlyOn = checkedSet("only");
+    state.yearMin = readYear("year-from");
+    state.yearMax = readYear("year-to");
+  }
+
+  function yearVisible(sid) {
+    if (state.yearMin == null && state.yearMax == null) return true;
+    const track = state.data && state.data.tracks && state.data.tracks[sid];
+    if (!track || track.year == null) return false;
+    if (state.yearMin != null && track.year < state.yearMin) return false;
+    if (state.yearMax != null && track.year > state.yearMax) return false;
+    return true;
   }
 
   function stormVisible(sid) {
+    if (!yearVisible(sid)) return false;
     const set = state.strengthOn;
     if (!set) return true;
     if (!state.data || !state.data.peakIndex) return false;
@@ -502,6 +523,17 @@
     els.years.textContent = meta.year_min && meta.year_max
       ? `${meta.year_min}–${meta.year_max} · ${meta.storms?.toLocaleString?.() || meta.storms} storms · ${meta.points?.toLocaleString?.() || meta.points} fixes`
       : "";
+    const from = document.getElementById("year-from");
+    const to = document.getElementById("year-to");
+    if (from && to && meta.year_min && meta.year_max) {
+      from.min = String(meta.year_min);
+      from.max = String(meta.year_max);
+      to.min = String(meta.year_min);
+      to.max = String(meta.year_max);
+      from.value = String(meta.year_min);
+      to.value = String(meta.year_max);
+      syncFilters();
+    }
   }
 
   async function loadBasinData(basinId) {
@@ -604,9 +636,22 @@
       state.trailMode = els.trails.value;
       renderFrame(state.index);
     });
-    document.getElementById("filter-body").addEventListener("change", () => {
+    const filterBody = document.getElementById("filter-body");
+    filterBody.addEventListener("change", () => {
       syncFilters();
-      renderFrame(state.index);
+      if (state.data) renderFrame(state.index);
+    });
+    filterBody.addEventListener("input", (ev) => {
+      if (!ev.target || ev.target.type !== "number") return;
+      syncFilters();
+      if (state.data) renderFrame(state.index);
+    });
+    filterBody.addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".filter-section-toggle");
+      if (!btn || !filterBody.contains(btn)) return;
+      const section = btn.parentElement;
+      const open = section.classList.toggle("is-open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
     });
     const filterToggle = document.getElementById("filter-toggle");
     filterToggle.addEventListener("click", () => {

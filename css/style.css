@@ -223,8 +223,53 @@ input[type="range"] {
   gap: 4px;
 }
 
-.filter-heading {
-  margin: 8px 0 4px;
+.filter-section-toggle {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.filter-section-toggle::after {
+  content: " ▾";
+  color: var(--muted);
+}
+
+.filter-section.is-open .filter-section-toggle::after {
+  content: " ▴";
+}
+
+.filter-section .filter-checks,
+.filter-section .filter-years {
+  display: none;
+}
+
+.filter-section.is-open .filter-checks,
+.filter-section.is-open .filter-years {
+  display: flex;
+}
+
+.filter-years {
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.filter-years label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.filter-years input {
+  width: 5.2rem;
+  padding: 4px 6px;
 }
 
 .filter-checks {
@@ -234,6 +279,7 @@ input[type="range"] {
   max-height: 168px;
   overflow: auto;
   padding-right: 4px;
+  margin-top: 4px;
 }
 
 .filter-checks label {
